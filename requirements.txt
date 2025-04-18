@@ -1,0 +1,12 @@
+python-dotenv
+PyYAML
+langchain
+langchain-core
+langchain-community
+langchain-google-genai
+langchain-google-vertexai
+faiss-cpu
+sentence-transformers
+transformers
+datasets
+numpy

@@ -47,5 +47,6 @@ def build_vector_poisoned_index(
     print(f">>> Built vector‑poisoned vectorstore → {poisoned_store_path}")
 
 if __name__ == "__main__":
-    build_vector_poisoned_index()
+    # Increase the number of adversarial vectors significantly
+    build_vector_poisoned_index(num_adv=100)
 

@@ -1,28 +1,20 @@
 import os
 import pickle
 from typing import List, Tuple
+from dotenv import load_dotenv
 
-import numpy as np
-from langchain_google_vertexai import VertexAIEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
+load_dotenv()
 
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL_NAME")
-GOOGLE_PROJECT_ID = os.getenv("GOOGLE_PROJECT_ID")
 
 if not EMBEDDING_MODEL:
     raise ValueError("EMBEDDING_MODEL_NAME environment variable not set.")
-if not GOOGLE_PROJECT_ID:
-    raise ValueError("GOOGLE_PROJECT_ID environment variable not set.")
 
-
-if EMBEDDING_MODEL == "text-embedding-004":
-    EMB_DIM = 768
-else:
-    EMB_DIM = 768
-    print(f"Warning: Unknown embedding model '{EMBEDDING_MODEL}', assuming dimension {EMB_DIM}")
-
+EMB_DIM = 384
 
 def load_texts(folder: str) -> Tuple[List[str], List[str]]:
     texts, ids = [], []
@@ -56,15 +48,15 @@ def build_faiss_index(
             docs.append(chunk)
             metadatas.append({"source": doc_id, "chunk": i})
 
-    embedder = VertexAIEmbeddings(
-        model_name=EMBEDDING_MODEL,
-        project=GOOGLE_PROJECT_ID
-    )
+    embedder = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+
+    print(f"Embedding {len(docs)} documents with Cohere model '{EMBEDDING_MODEL}'...")
     db = FAISS.from_texts(
         texts=docs,
         embedding=embedder,
         metadatas=metadatas
     )
+    print("Building FAISS index...")
 
     db.save_local(store_path)
     with open(ids_path, "wb") as f:

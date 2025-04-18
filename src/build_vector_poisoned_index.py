@@ -1,14 +1,14 @@
 import os
 import numpy as np
-from langchain_google_vertexai import VertexAIEmbeddings
+from dotenv import load_dotenv
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from build_index import load_texts, EMB_DIM
+from build_index import EMB_DIM
 
-GOOGLE_PROJECT_ID = os.getenv("GOOGLE_PROJECT_ID")
+load_dotenv()
+
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL_NAME")
 
-if not GOOGLE_PROJECT_ID:
-    raise ValueError("GOOGLE_PROJECT_ID environment variable not set.")
 if not EMBEDDING_MODEL:
     raise ValueError("EMBEDDING_MODEL_NAME environment variable not set.")
 
@@ -19,17 +19,13 @@ def build_vector_poisoned_index(
     num_adv: int              = 5,
     noise_scale: float        = 1e-3
 ) -> None:
-    embedder = VertexAIEmbeddings(
-        model_name=EMBEDDING_MODEL,
-        project=GOOGLE_PROJECT_ID
-    )
+    embedder = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
     db = FAISS.load_local(
         clean_store_path,
         embedder,
         allow_dangerous_deserialization=True
     )
-    idx = db.index
 
     emb_dim = EMB_DIM
 

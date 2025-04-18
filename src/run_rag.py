@@ -4,48 +4,42 @@ import json
 import ast
 from dotenv import load_dotenv
 
-from langchain_google_genai import ChatGoogleGenerativeAI
+load_dotenv()
+
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL_NAME")
+LLM_MODEL = os.getenv("OLLAMA_LLM_MODEL")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL")
+
+if not EMBEDDING_MODEL:
+    raise ValueError("COHERE_EMBEDDING_MODEL environment variable not set.")
+if not LLM_MODEL:
+    raise ValueError("OLLAMA_LLM_MODEL environment variable not set.")
+
+from langchain_community.chat_models import ChatOllama
 from langchain_core.messages import HumanMessage
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-from langchain_google_vertexai import VertexAIEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 
 from langchain.chains import RetrievalQA
 
-from build_index import load_texts, MODEL_NAME
-
-load_dotenv()
-
-GOOGLE_PROJECT_ID = os.getenv("GOOGLE_PROJECT_ID")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL_NAME")
-LLM_MODEL = os.getenv("LLM_MODEL_NAME")
-
-if not GOOGLE_PROJECT_ID:
-    raise ValueError("GOOGLE_PROJECT_ID environment variable not set.")
-if not EMBEDDING_MODEL:
-    raise ValueError("EMBEDDING_MODEL_NAME environment variable not set.")
-if not LLM_MODEL:
-    raise ValueError("LLM_MODEL_NAME environment variable not set.")
+from build_index import load_texts
 
 def make_qa_chain(store_path: str, corpus_folder: str):
     docs, _ = load_texts(corpus_folder)
 
     store = FAISS.load_local(
         store_path,
-        VertexAIEmbeddings(
-            model_name=EMBEDDING_MODEL,
-            project=GOOGLE_PROJECT_ID
-        ),
+        HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL),
         allow_dangerous_deserialization=True
     )
     retriever = store.as_retriever()
 
-    llm = ChatGoogleGenerativeAI(
-        model=LLM_MODEL,
-        temperature=0.0,
-        convert_system_message_to_human=True
-    )
+    llm_params = {"model": LLM_MODEL, "temperature": 0.0}
+    if OLLAMA_BASE_URL:
+        llm_params["base_url"] = OLLAMA_BASE_URL
+    llm = ChatOllama(**llm_params)
 
     return RetrievalQA.from_chain_type(
         llm=llm,
@@ -80,11 +74,11 @@ if __name__ == "__main__":
         batch_size = 20
         batches = [chunks[i : i + batch_size] for i in range(0, len(chunks), batch_size)]
 
-        gen_llm = ChatGoogleGenerativeAI(
-            model=LLM_MODEL,
-            temperature=0.0,
-            convert_system_message_to_human=True
-        )
+        gen_llm_params = {"model": LLM_MODEL, "temperature": 0.0}
+        if OLLAMA_BASE_URL:
+            gen_llm_params["base_url"] = OLLAMA_BASE_URL
+        gen_llm = ChatOllama(**gen_llm_params)
+
         all_queries = set()
 
         for batch in batches:

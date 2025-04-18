@@ -111,3 +111,6 @@ outputs/*
 *.private
 credentials*
 *key* 
+
+*.faiss
+*.pkl
